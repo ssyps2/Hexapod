@@ -10,7 +10,7 @@ import kinematics
 
 ik = kinematics.IK()
 
-if sys.version_info.major == 2:
+if sys.version_info.major == 2:     # check python version
     print('Please run this program with python3!')
     sys.exit(0)
 
@@ -28,10 +28,3 @@ def startHexapod():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
     startHexapod()
-
-# 主线程，已经以后台的形式开机自启
-# 自启方式systemd，自启文件/etc/systemd/system/spiderpi.service
-# sudo systemctl stop spiderpi  此次关闭
-# sudo systemctl disable spiderpi 永久关闭
-# sudo systemctl enable spiderpi 永久开启
-# sudo systemctl start spiderpi 此次开启

@@ -30,9 +30,4 @@ def getBusServoStatus():
     time.sleep(0.5)  # 延时方便查看
 
 while True:   
-    Board.setBusServoPulse(9, 500, 1000) # 9号舵机转到500位置用时1000ms
-    time.sleep(1)
-    getBusServoStatus()
-    Board.setBusServoPulse(9, 300, 1000)
-    time.sleep(1)
     getBusServoStatus()
