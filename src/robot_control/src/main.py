@@ -20,7 +20,7 @@ def startHexapod():
 
         while True:
             try:
-                if 
+                pass
             except BaseException as e:
                 print(e)
                 break
