@@ -58,4 +58,4 @@ end_trial = leg1.fkine(q);%根据插值，得到末端执行器位姿
 hold on
 
 leg1.plot(q);
-leg1.teach();
+% leg1.teach();
