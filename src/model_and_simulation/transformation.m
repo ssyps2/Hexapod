@@ -30,6 +30,8 @@ standard_DH = [theta(1,1)   0      0.043   -pi/2;
 R0_1 = [rotz(theta(1,1)),[0;0;0]; 0,0,0,1];
 R1_2 = [rotx(standard_DH(1,4))*rotz(theta(1,2)),[0;0;0]; 0,0,0,1];
 R2_3 = [rotx(standard_DH(2,4))*rotz(theta(1,3)),[0;0;0]; 0,0,0,1];
+R0_3 = R0_1 * R1_2 * R2_3;
+R3_0 = transpose(R0_3);
 
 T0_1 = [eye(3,3),[0.043; 0; 0]; 0,0,0,1];
 T1_2 = [eye(3,3),[0.073; 0; 0]; 0,0,0,1];
@@ -39,7 +41,7 @@ HTM_leg = R0_1 * T0_1 * R1_2 * T1_2 * R2_3 * T2_3;
 HTM_base2leg = cell(6,1);
 
 for i = 1:6
-    HTM_base2leg{i} = [rotz(angle_base2leg(1,i)),[0;0;0]; 0,0,0,1] * transl([length_base2leg;0;0]) * HTM_leg;
+    HTM_base2leg{i} = [rotz(angle_base2leg(1,i)),[0;0;0]; 0,0,0,1] * transl(length_base2leg,0,0) * HTM_leg;
 end
 
 %% robot kinematics model
@@ -65,5 +67,5 @@ end_trial = robot_leg.fkine(q);%根据插值，得到末端执行器位姿
 % plot3(end_trial(:).t(1,1),end_trial(:).t(1,2),end_trial(:).t(1,3));%输出末端轨迹
 hold on
 
-robot_leg.plot(q);
+robot_leg.plot(theta);
 % robot_leg.teach();

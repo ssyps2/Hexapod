@@ -2,11 +2,18 @@
 import os
 import sys
 import time
+import pigpio
 from BusServoCmd import *
 
 if sys.version_info.major == 2:
     print('Please run this program with python3!')
     sys.exit(0)
+
+pi = pigpio.pi()
+
+def setBuzzer(new_state):
+    pi.set_mode(31, OUTPUT)
+    pi.write(31, new_state)
 
 def setBusServoID(oldid, newid):
     """
@@ -87,7 +94,6 @@ def getBusServoAngleLimit(id):
     :param id:
     :return: 返回元祖 0： 低位  1： 高位
     '''
-    
     while True:
         serial_servo_read_cmd(id, SERVO_ANGLE_LIMIT_READ)
         msg = serial_servo_get_rmsg(SERVO_ANGLE_LIMIT_READ)

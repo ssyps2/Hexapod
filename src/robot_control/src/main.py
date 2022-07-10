@@ -4,15 +4,23 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
 import time
-import logging
 import numpy as np
+import logging
 import kinematics
+import rospy
+from geometry_msgs.msg import Twist
 
 ik = kinematics.IK()
 
-if sys.version_info.major == 2:     # check python version
-    print('Please run this program with python3!')
-    sys.exit(0)
+def cmdCallback(twistMsg):
+    rospy.loginfo("x:%.6f, y:%.6f, z:%.6f", twistMsg.x, twistMsg.y, twistMsg.z)
+
+def cmd_subscriber():
+    rospy.init_node('cmd_subscriber', anonymous=True)
+
+    rospy.Subscriber("/twist_cmd", Twist, cmdCallback)    # name reserved:/twist_cmd
+
+    rospy.spin()
 
 def startHexapod():
     while True:
@@ -27,4 +35,5 @@ def startHexapod():
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
+    cmd_subscriber()
     startHexapod()

@@ -3,6 +3,7 @@
 import time
 import serial
 import ctypes
+import pigpio   # should be BCM number
 
 SERVO_FRAME_HEADER         = 0x55
 SERVO_MOVE_TIME_WRITE      = 1
@@ -34,28 +35,50 @@ SERVO_LED_CTRL_READ        = 34
 SERVO_LED_ERROR_WRITE      = 35
 SERVO_LED_ERROR_READ       = 36
 
-serialHandle = serial.Serial("/dev/ttyUSB0", 115200)
+rx_pin = 7  # physical pin
+tx_pin = 13
+
+pi = pigpio.pi()
+
+serialHandle = serial.Serial("/dev/ttyAMA0", 115200)  # 初始化串口， 波特率为115200
+
+def portInit():
+    pi.set_mode(rx_pin, OUTPUT)   # config RX_CON(GPIO17) to be OUTPUT 
+    pi.write(rx_pin, 0)
+    pi.set_mode(tx_pin, OUTPUT)   # config TX_CON(GPIO27) to be OUTPUT 
+    pi.write(tx_pin, 1)
+
+portInit()
+
+def portWrite():
+    pi.write(tx_pin, 1)    # pull up TX_CON(GPIO27)
+    pi.write(rx_pin, 0)    # pull down RX_CON(GPIO17)
+
+def portRead():
+    pi.write(rx_pin, 1)    # pull up RX_CON(GPIO17)
+    pi.write(tx_pin, 0)    # pull down TX_CON(GPIO27)
+
+def portRest():
+    time.sleep(0.1)
+    serialHandle.close()
+    pi.write(rx_pin, 1)
+    pi.write(tx_pin, 1)
+    serialHandle.open()
+    time.sleep(0.1)
 
 def checksum(buf):
     sum = 0x00
     for b in buf:
         sum += b
-    sum = sum - 0x55 - 0x55  # remove the two header (0x55)
-    sum = ~sum  # reverse
+    sum = sum - 0x55 - 0x55  # remove the two header(0x55)
+    sum = ~sum  # inverse
     return sum & 0xff
 
+## send write command to servo
 def serial_servo_wirte_cmd(id=None, w_cmd=None, dat1=None, dat2=None):
-    '''
-    write
-    :param id:
-    :param w_cmd:
-    :param dat1:
-    :param dat2:
-    :return:
-    '''
+    portWrite()
     buf = bytearray(b'\x55\x55')  # header
     buf.append(id)
-    # command length
     if dat1 is None and dat2 is None:
         buf.append(3)
     elif dat1 is not None and dat2 is None:
@@ -63,8 +86,7 @@ def serial_servo_wirte_cmd(id=None, w_cmd=None, dat1=None, dat2=None):
     elif dat1 is not None and dat2 is not None:
         buf.append(7)
 
-    buf.append(w_cmd)  # write command
-    
+    buf.append(w_cmd)
     if dat1 is None and dat2 is None:
         pass
     elif dat1 is not None and dat2 is None:
@@ -72,48 +94,36 @@ def serial_servo_wirte_cmd(id=None, w_cmd=None, dat1=None, dat2=None):
     elif dat1 is not None and dat2 is not None:
         buf.extend([(0xff & dat1), (0xff & (dat1 >> 8))])
         buf.extend([(0xff & dat2), (0xff & (dat2 >> 8))])
-    
     buf.append(checksum(buf))
-    
-    serialHandle.write(buf)  # send
 
+    serialHandle.write(buf) # send out
+
+## send read command to servo
 def serial_servo_read_cmd(id=None, r_cmd=None):
-    '''
-    read
-    :param id:
-    :param r_cmd:
-    :param dat:
-    :return:
-    '''
-    buf = bytearray(b'\x55\x55')
+    portWrite()
+    buf = bytearray(b'\x55\x55')  # header
     buf.append(id)
-    buf.append(3)  # cmd length
-    buf.append(r_cmd)  # read command
+    buf.append(3)  # length
+    buf.append(r_cmd)
     buf.append(checksum(buf))
     serialHandle.write(buf)  # send
     time.sleep(0.00034)
 
 def serial_servo_get_rmsg(cmd):
-    '''
-    # 获取指定读取命令的数据
-    :param cmd: 读取命令
-    :return: 数据
-    '''
-    serialHandle.flushInput()  # 清空接收缓存
-    # portRead()  # 将单线串口配置为输入
-    time.sleep(0.005)  # 稍作延时，等待接收完毕
-    count = serialHandle.inWaiting()    # 获取接收缓存中的字节数
-    if count != 0:  # 如果接收到的数据不空
-        recv_data = serialHandle.read(count)  # 读取接收到的数据
+    serialHandle.flushInput()
+    portRead()
+    time.sleep(0.005)   # wait for completed
+    count = serialHandle.inWaiting()    # obtain the number of bytes in recv buffer
+    if count != 0:  # if received message
+        recv_data = serialHandle.read(count)
         # for i in recv_data:
         #     print('%#x' %ord(i))
-        # 是否是读id指令
         try:
             if recv_data[0] == 0x55 and recv_data[1] == 0x55 and recv_data[4] == cmd:
                 dat_len = recv_data[3]
-                serialHandle.flushInput()  # 清空接收缓存
+                serialHandle.flushInput()
                 if dat_len == 4:
-                    # print ctypes.c_int8(ord(recv_data[5])).value    # 转换成有符号整型
+                    # print ctypes.c_int8(ord(recv_data[5])).value    # convert to signed int
                     return recv_data[5]
                 elif dat_len == 5:
                     pos = 0xffff & (recv_data[5] | (0xff00 & (recv_data[6] << 8)))
@@ -127,5 +137,5 @@ def serial_servo_get_rmsg(cmd):
         except BaseException as e:
             print(e)
     else:
-        serialHandle.flushInput()  # 清空接收缓存
+        serialHandle.flushInput()  # clear recv buffer
         return None
