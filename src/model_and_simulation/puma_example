@@ -1,0 +1,7 @@
+load exampleRobots.mat
+removeBody(puma1,'L3');
+
+addBody(puma1,body3Copy,'L2')
+addSubtree(puma1,'L3',subtree)
+
+showdetails(puma1)

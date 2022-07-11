@@ -8,7 +8,7 @@ theta_zero = [0,0,0];
 theta_stand = [0,deg2rad(-12),deg2rad(-74)];   % should be the feedback angle by servo in rad
 theta_front = [deg2rad(-41),deg2rad(-22),deg2rad(-100)];
 theta_back = [deg2rad(7.2),deg2rad(2.4),deg2rad(-43)];
-theta_up = [deg2rad(-24),deg2rad(-60),deg2rad(-117)];   
+theta_up = [deg2rad(-24),deg2rad(-60),deg2rad(-117)];
 
 theta = theta_stand;
 
@@ -44,29 +44,29 @@ for i = 1:6
 end
 
 %% robot kinematics model
+%     legs = 
 L1 = Link(standard_DH(1,:),'standard');  % length in m, revolute joint
 L2 = Link(standard_DH(2,:),'standard');
 L3 = Link(standard_DH(3,:),'standard');
 
-robot_leg = cell(6,1);
-for i = 1:6
-    robot_leg{i} = SerialLink([L1,L2,L3],'name',['leg' num2str(i)]);
-end
+% robot_leg = cell(6,1);
+robot_leg3 = SerialLink([L1,L2,L3],'name','leg3');
+robot_leg1 = SerialLink([L1,L2,L3],'name','leg1');
 
-start_pos = robot_leg{3}.fkine(theta);
+start_pos = robot_leg3.fkine(theta);
 % pace = 0.1;    % unit:m
 % start_pos.t(1,1) = start_pos.t(1,1) + pace;
-end_pos = robot_leg{3}.fkine(theta_front);
-q1 = robot_leg{3}.ikine(start_pos,'mask',[1,1,1,0,0,0]);
-q2 = robot_leg{3}.ikine(end_pos,'mask',[1,1,1,0,0,0]);
+end_pos = robot_leg3.fkine(theta_front);
+q1 = robot_leg3.ikine(start_pos,'mask',[1,1,1,0,0,0]);
+q2 = robot_leg3.ikine(end_pos,'mask',[1,1,1,0,0,0]);
 
 sample_dot = 20;
 [q ,qd, qdd] = jtraj(q1,q2,sample_dot); % 五次多项式轨迹，得到关节角度，角速度，角加速度，20为采样点个数
 
 grid on
-end_trial = robot_leg{3}.fkine(q);%根据插值，得到末端执行器位姿
+end_trial = robot_leg3.fkine(q);%根据插值，得到末端执行器位姿
 % plot3(end_trial(:).t(1,1),end_trial(:).t(1,2),end_trial(:).t(1,3));%输出末端轨迹
 hold on
 
-robot_leg{3}.plot(theta);
-% robot_leg{3}.teach();
+robot_leg3.plot(theta);
+% robot_leg.teach();
