@@ -1,8 +1,7 @@
+%% in left-handed coordinate
 cmd_vel = [0.001,0,0];   % x, y, z cmd velocity
-pulse = cell(6,3);
 
 angle_base2leg = [atan2(6,12),pi/2,pi-atan2(6,12),-atan2(6,12),-pi/2,atan2(6,12)-pi];  % related to z-axis, leg1~6
-length_base2leg = 0.18;  % unit:m
 
 theta_zero = [0,0,0];
 theta_stand = [0,deg2rad(-12),deg2rad(-74)];   % should be the feedback angle by servo in rad
@@ -40,7 +39,7 @@ HTM_leg = R0_1 * T0_1 * R1_2 * T1_2 * R2_3 * T2_3;
 HTM_base2leg = cell(6,1);
 
 for i = 1:6
-    HTM_base2leg{i} = [rotz(angle_base2leg(1,i)),[0;0;0]; 0,0,0,1] * transl(length_base2leg,0,0) * HTM_leg;
+    HTM_base2leg{i} = transl(-0.12,-0.06,0) * [rotz(angle_base2leg(1,i)),[0;0;0]; 0,0,0,1] * HTM_leg;
 end
 
 %% robot kinematics model

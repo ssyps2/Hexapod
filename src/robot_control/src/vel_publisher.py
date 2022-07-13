@@ -7,8 +7,8 @@ from geometry_msgs.msg import Twist
 def velocity_publisher():
     rospy.init_node('velocity_publisher', anonymous=True)
 
-	# topic name: /hexapod/cmd_vel; message type: geometry_msgs::Twist
-    turtle_vel_pub = rospy.Publisher('/hexapod/cmd_vel', Twist, queue_size=10)
+	# topic name: /hex/cmd_vel; message type: geometry_msgs::Twist
+    turtle_vel_pub = rospy.Publisher('/hex/cmd_vel', Twist, queue_size=10)
 
     rate = rospy.Rate(10)   # 10Hz
 

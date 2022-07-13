@@ -22,7 +22,7 @@ def cmd_subscriber():
 
     rospy.spin()
 
-def startHexapod():
+def starthex():
     while True:
         time.sleep(0.03)
 
@@ -36,4 +36,4 @@ def startHexapod():
 if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
     cmd_subscriber()
-    startHexapod()
+    starthex()
