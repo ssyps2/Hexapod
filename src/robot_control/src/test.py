@@ -2,7 +2,6 @@ import time
 import numpy as np
 import spatialmath as sm
 import roboticstoolbox as rtb
-import matplotlib.pyplot as plt
 
 def getEndEffectorPose():
     legs_joint_angle = (0, np.deg2rad(-12/2), np.deg2rad(-74/2))
@@ -21,10 +20,10 @@ def getEndEffectorPose():
         * hex_legs.fkine(legs_joint_angle)
         
     pos3 = leg_eePose2base_lambda(-0.12, -0.06, np.pi-np.arctan2(0.06,0.12))
-    print(pos3)
+    print(pos3.t)
     
-    print(hex_legs.fkine(legs_joint_angle))
-    hex_legs.plot(legs_joint_angle)
-    time.sleep(60)
+    # print(hex_legs.fkine(legs_joint_angle))
+    # hex_legs.plot(legs_joint_angle)
+    # time.sleep(60)
 
 getEndEffectorPose()

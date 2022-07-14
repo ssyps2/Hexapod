@@ -3,17 +3,16 @@
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-import time
-import numpy as np
 import logging
 import kinematics
 import rospy
 from geometry_msgs.msg import Twist
 
-ik = kinematics.IK()
+hexapod = kinematics.hex_kine()
 
 def cmdCallback(twistMsg):
     rospy.loginfo("x:%.6f, y:%.6f, z:%.6f", twistMsg.x, twistMsg.y, twistMsg.z)
+    hexapod.cmdHexapodMove(twistMsg.x, twistMsg.y, twistMsg.z, kinematics.hex_mode_e().TRIPOD)
 
 def cmd_subscriber():
     rospy.init_node('cmd_subscriber', anonymous=True)
@@ -22,18 +21,7 @@ def cmd_subscriber():
 
     rospy.spin()
 
-def starthex():
-    while True:
-        time.sleep(0.03)
-
-        while True:
-            try:
-                pass
-            except BaseException as e:
-                print(e)
-                break
-
 if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
+
     cmd_subscriber()
-    starthex()
