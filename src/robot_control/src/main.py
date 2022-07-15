@@ -7,12 +7,13 @@ import logging
 import kinematics
 import rospy
 from geometry_msgs.msg import Twist
+from vel_publisher import CONTROL_FREQ as PUB_RATE
 
-hexapod = kinematics.hex_kine()
+hexapod = kinematics.hex_kine(ctrl_freq = PUB_RATE)  # same with freq of publisher
 
 def cmdCallback(twistMsg):
     rospy.loginfo("x:%.6f, y:%.6f, z:%.6f", twistMsg.x, twistMsg.y, twistMsg.z)
-    hexapod.cmdHexapodMove(twistMsg.x, twistMsg.y, twistMsg.z, kinematics.hex_mode_e().TRIPOD)
+    hexapod.cmdHexapodMove(twistMsg.x, twistMsg.y, twistMsg.z, kinematics.hex_mode_e().TRIPOD) # pace height 4cm
 
 def cmd_subscriber():
     rospy.init_node('cmd_subscriber', anonymous=True)
@@ -23,5 +24,7 @@ def cmd_subscriber():
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
+
+    hexapod.initHexapod()
 
     cmd_subscriber()

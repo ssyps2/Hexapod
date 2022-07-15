@@ -4,13 +4,15 @@
 import rospy
 from geometry_msgs.msg import Twist
 
+CONTROL_FREQ = 30  # Hz
+
 def velocity_publisher():
     rospy.init_node('velocity_publisher', anonymous=True)
 
 	# topic name: /hex/cmd_vel; message type: geometry_msgs::Twist
     turtle_vel_pub = rospy.Publisher('/hex/cmd_vel', Twist, queue_size=10)
 
-    rate = rospy.Rate(10)   # 10Hz
+    rate = rospy.Rate(CONTROL_FREQ)
 
     while not rospy.is_shutdown():
         vel_msg = Twist()
