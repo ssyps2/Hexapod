@@ -319,13 +319,13 @@ class hex_kine():
         # joint2 and 3 of leg3~5 was inversed because of assembling
         for i in range(0,6):
             if i < 3:
-                Board.setBusServoPulse(hex_kine.legs_ID[i][0], hex_kine.angle2pulse_lambda(leg_joint_angle[i][0]), 1000)
-                Board.setBusServoPulse(hex_kine.legs_ID[i][1], hex_kine.angle2pulse_lambda(leg_joint_angle[i][1]), 1000)
-                Board.setBusServoPulse(hex_kine.legs_ID[i][2], hex_kine.angle2pulse_lambda(leg_joint_angle[i][2]), 1000)
+                Board.setBusServoPulse(hex_kine.legs_ID[i][0], hex_kine.angle2pulse_lambda(leg_joint_angle[i][0]), 100)
+                Board.setBusServoPulse(hex_kine.legs_ID[i][1], hex_kine.angle2pulse_lambda(leg_joint_angle[i][1]), 100)
+                Board.setBusServoPulse(hex_kine.legs_ID[i][2], hex_kine.angle2pulse_lambda(leg_joint_angle[i][2]), 100)
             elif i >= 3:
-                Board.setBusServoPulse(hex_kine.legs_ID[i][0], hex_kine.angle2pulse_lambda(leg_joint_angle[i][0]), 1000)
-                Board.setBusServoPulse(hex_kine.legs_ID[i][1], hex_kine.angle2pulse_lambda(-leg_joint_angle[i][1]), 1000)
-                Board.setBusServoPulse(hex_kine.legs_ID[i][2], hex_kine.angle2pulse_lambda(-leg_joint_angle[i][2]), 1000)
+                Board.setBusServoPulse(hex_kine.legs_ID[i][0], hex_kine.angle2pulse_lambda(leg_joint_angle[i][0]), 100)
+                Board.setBusServoPulse(hex_kine.legs_ID[i][1], hex_kine.angle2pulse_lambda(-leg_joint_angle[i][1]), 100)
+                Board.setBusServoPulse(hex_kine.legs_ID[i][2], hex_kine.angle2pulse_lambda(-leg_joint_angle[i][2]), 100)
     
     @classmethod
     def initHexapod():

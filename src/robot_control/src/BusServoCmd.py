@@ -35,28 +35,28 @@ SERVO_LED_CTRL_READ        = 34
 SERVO_LED_ERROR_WRITE      = 35
 SERVO_LED_ERROR_READ       = 36
 
-rx_pin = 7  # physical pin
-tx_pin = 13
+rx_pin = 4  # physical pin 7, BCM 4
+tx_pin = 27 # physical pin 13, BCM 27
 
 pi = pigpio.pi()
 
 serialHandle = serial.Serial("/dev/ttyAMA0", 115200)  # 初始化串口， 波特率为115200
 
 def portInit():
-    pi.set_mode(rx_pin, OUTPUT)   # config RX_CON(GPIO17) to be OUTPUT 
+    pi.set_mode(rx_pin, pigpio.OUTPUT)   # config RX_CON to be OUTPUT 
     pi.write(rx_pin, 0)
-    pi.set_mode(tx_pin, OUTPUT)   # config TX_CON(GPIO27) to be OUTPUT 
+    pi.set_mode(tx_pin, pigpio.OUTPUT)   # config TX_CON to be OUTPUT 
     pi.write(tx_pin, 1)
 
 portInit()
 
 def portWrite():
-    pi.write(tx_pin, 1)    # pull up TX_CON(GPIO27)
-    pi.write(rx_pin, 0)    # pull down RX_CON(GPIO17)
+    pi.write(tx_pin, 1)    # pull up TX_CON
+    pi.write(rx_pin, 0)    # pull down RX_CON
 
 def portRead():
-    pi.write(rx_pin, 1)    # pull up RX_CON(GPIO17)
-    pi.write(tx_pin, 0)    # pull down TX_CON(GPIO27)
+    pi.write(rx_pin, 1)    # pull up RX_CON
+    pi.write(tx_pin, 0)    # pull down TX_CON
 
 def portRest():
     time.sleep(0.1)
@@ -97,6 +97,7 @@ def serial_servo_wirte_cmd(id=None, w_cmd=None, dat1=None, dat2=None):
     buf.append(checksum(buf))
 
     serialHandle.write(buf) # send out
+    print(buf)
 
 ## send read command to servo
 def serial_servo_read_cmd(id=None, r_cmd=None):

@@ -12,8 +12,8 @@ if sys.version_info.major == 2:
 pi = pigpio.pi()
 
 def setBuzzer(new_state):
-    pi.set_mode(31, OUTPUT)
-    pi.write(31, new_state)
+    pi.set_mode(6, pigpio.OUTPUT)
+    pi.write(6, new_state)
 
 def setBusServoID(oldid, newid):
     """
