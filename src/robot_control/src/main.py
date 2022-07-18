@@ -3,6 +3,7 @@
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import time
 import logging
 import kinematics
 import rospy
@@ -13,7 +14,7 @@ hexapod = kinematics.hex_kine(ctrl_freq = PUB_RATE)  # same with freq of publish
 
 def cmdCallback(twistMsg):
     rospy.loginfo("x:%.6f, y:%.6f, z:%.6f", twistMsg.x, twistMsg.y, twistMsg.z)
-    hexapod.cmdHexapodMove(twistMsg.x, twistMsg.y, twistMsg.z, kinematics.hex_mode_e().TRIPOD) # pace height 4cm
+    hexapod.cmdHexapodMove(twistMsg.x, twistMsg.y, twistMsg.z, kinematics.hex_mode_e().TRIPOD)
 
 def cmd_subscriber():
     rospy.init_node('cmd_subscriber', anonymous=True)
@@ -26,5 +27,6 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.ERROR)
 
     hexapod.initHexapod()
+    time.sleep(2)
 
     cmd_subscriber()

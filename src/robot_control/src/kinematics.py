@@ -25,7 +25,7 @@ class hex_kine():
     #               leg1            leg2             leg3              leg4             leg5              leg6
     legs_ID = (leg_ID_lambda(7),leg_ID_lambda(4),leg_ID_lambda(1),leg_ID_lambda(10),leg_ID_lambda(13),leg_ID_lambda(16))
 
-    @staticmethod
+    @classmethod
     def getJointAngle():
         """
         : feedback angle by servo in rad (for IK)
@@ -166,8 +166,7 @@ class hex_kine():
     left_flag_sequence = (1,-1,0,0)
     right_flag_sequence = (0,0,1,-1)
 
-    @staticmethod
-    class Timer():
+    class __Timer():
         def __init__(self, increment):
             self.next_t=time.time()
             self.i=0
@@ -188,9 +187,11 @@ class hex_kine():
                 else:
                     self.i += 1
         
+        @classmethod
         def stop(self):
             self.done=True
 
+        @classmethod
         def restart(self):
             self.done=False
             self.next_t = time.time()
@@ -198,7 +199,7 @@ class hex_kine():
             self._run()
 
     pace_freq = 0.5  # Hz
-    hex_timer = Timer(increment = 1/(4*pace_freq)) # create a timer
+    hex_timer =  __Timer(increment = 1/(4*pace_freq)) # create a timer
 
     # constraints
     MAX_PACE_LENGTH = 0.15  # max pace length: 15cm
