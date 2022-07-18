@@ -3,7 +3,7 @@ import enum
 import Board
 import numpy as np
 import spatialmath as sm
-import roboticstoolbox as rtb
+# import roboticstoolbox as rtb
 import threading
 import time
 
@@ -67,31 +67,31 @@ class hex_kine():
 
         return [HTM_leg, R0_3, R3_0]
     
-    @staticmethod
-    def createRobotLegs():
-        legs_joint_angle = hex_kine.getJointAngle()
+    # @staticmethod
+    # def createRobotLegs():
+    #     legs_joint_angle = hex_kine.getJointAngle()
 
-        # d=offset(i), a=length(i), alpha(i), theta(i)
-        standard_DH_lambda = lambda legNum: [ [0, 0.043, -pi/2, legs_joint_angle[legNum][0]],
-            [0, 0.073, pi, legs_joint_angle[legNum][1]], [0, 0.133, 0, legs_joint_angle[legNum][2]] ]
+    #     # d=offset(i), a=length(i), alpha(i), theta(i)
+    #     standard_DH_lambda = lambda legNum: [ [0, 0.043, -pi/2, legs_joint_angle[legNum][0]],
+    #         [0, 0.073, pi, legs_joint_angle[legNum][1]], [0, 0.133, 0, legs_joint_angle[legNum][2]] ]
 
-        hex_legs = []
+    #     hex_legs = []
 
-        # update DH parameter for each leg, qlim is the joint angle limitation
-        for i in range(0,6):
-            hex_legs.append(rtb.DHRobot([
-                rtb.RevoluteDH(a = standard_DH_lambda(i)[0][1], alpha = standard_DH_lambda(i)[0][2],
-                    offset = standard_DH_lambda(i)[0][3], qlim = (np.deg2rad(-45),np.deg2rad(45))),
-                rtb.RevoluteDH(a = standard_DH_lambda(i)[1][1], alpha = standard_DH_lambda(i)[1][2],
-                    offset = standard_DH_lambda(i)[1][3], qlim = (np.deg2rad(-60),np.deg2rad(90))),
-                rtb.RevoluteDH(a = standard_DH_lambda(i)[2][1], alpha = standard_DH_lambda(i)[2][2],
-                    offset = standard_DH_lambda(i)[2][3], qlim = (np.deg2rad(-120),0))],
-                name='leg'+str(i)))    # create each leg as a "serial-link robot"
+    #     # update DH parameter for each leg, qlim is the joint angle limitation
+    #     for i in range(0,6):
+    #         hex_legs.append(rtb.DHRobot([
+    #             rtb.RevoluteDH(a = standard_DH_lambda(i)[0][1], alpha = standard_DH_lambda(i)[0][2],
+    #                 offset = standard_DH_lambda(i)[0][3], qlim = (np.deg2rad(-45),np.deg2rad(45))),
+    #             rtb.RevoluteDH(a = standard_DH_lambda(i)[1][1], alpha = standard_DH_lambda(i)[1][2],
+    #                 offset = standard_DH_lambda(i)[1][3], qlim = (np.deg2rad(-60),np.deg2rad(90))),
+    #             rtb.RevoluteDH(a = standard_DH_lambda(i)[2][1], alpha = standard_DH_lambda(i)[2][2],
+    #                 offset = standard_DH_lambda(i)[2][3], qlim = (np.deg2rad(-120),0))],
+    #             name='leg'+str(i)))    # create each leg as a "serial-link robot"
 
-        return hex_legs
+    #     return hex_legs
 
-    # hexapod legs model
-    hex_legs = createRobotLegs()
+    # # hexapod legs model
+    # hex_legs = createRobotLegs()
 
     # hip servo assemble angle relative to base frame
     angle_hip2base = (np.arctan2(6,12), pi/2, pi-np.arctan2(6,12), 
@@ -114,7 +114,7 @@ class hex_kine():
         : for the leg, in euler angle: z1->x1->z2->z3
             >>> retval: list of end-effector pose to base frame
         """
-        # legs_joint_angle = hex_kine.getJointAngle()
+        legs_joint_angle = hex_kine.getJointAngle()
 
         # processed_theta = []  # "processed" by /2
 
@@ -126,7 +126,7 @@ class hex_kine():
 
         # end-effector pose of each leg relative to base frame (right-handed coordinate)
         leg_eePose2base_lambda = lambda tran_x,tran_y,tran_z,rota_z,leg_id: sm.SE3(tran_x,tran_y,tran_z)*\
-            sm.SE3.Rz(rota_z) * hex_kine.calcLegFK(hex_kine.hex_legs[leg_id].theta)[0]
+            sm.SE3.Rz(rota_z) * hex_kine.calcLegFK([legs_joint_angle[leg_id][0],legs_joint_angle[leg_id][1],legs_joint_angle[leg_id][2]])[0]
 
         leg_eePose2base = []
 
@@ -136,7 +136,7 @@ class hex_kine():
                 hex_kine.position_hip2base[i][2], hex_kine.angle_hip2base[i], i))
 
         # end-effector pose of each leg relative to its hip (right-handed coordinate)
-        leg_eePose2hip_lambda = lambda leg_id: hex_kine.calcLegFK(hex_kine.hex_legs[leg_id].theta)[0]
+        leg_eePose2hip_lambda = lambda leg_id: hex_kine.calcLegFK([legs_joint_angle[leg_id][0],legs_joint_angle[leg_id][1],legs_joint_angle[leg_id][2]])[0]
 
         leg_eePose2hip = [leg_eePose2hip_lambda(0),leg_eePose2hip_lambda(1),leg_eePose2hip_lambda(2),
                         leg_eePose2hip_lambda(3),leg_eePose2hip_lambda(4),leg_eePose2hip_lambda(5)]
