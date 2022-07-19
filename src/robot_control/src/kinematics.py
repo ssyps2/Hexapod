@@ -26,27 +26,27 @@ class hex_kine():
     legs_ID = (leg_ID_lambda(7),leg_ID_lambda(4),leg_ID_lambda(1),leg_ID_lambda(10),leg_ID_lambda(13),leg_ID_lambda(16))
 
     @classmethod
-    def getJointAngle(self):
+    def getJointAngle(cls):
         """
         : feedback angle by servo in rad (for IK)
             >>> retval: legs_joint_angle[legNum][jointID]
         """
-        pulse2angle_lambda = lambda pulse: (pulse - self.SERVO_HALF_PULSE) * self.PULSE2ANGLE # in degree
+        pulse2angle_lambda = lambda pulse: (pulse - hex_kine.SERVO_HALF_PULSE) * hex_kine.PULSE2ANGLE # in degree
 
         legs_joint_angle = []
 
         # joint2 and 3 of leg3~6 was inversed because of assembling
         for i in range(0,6):
             if i < 3:
-                legs_joint_angle.append([pulse2angle_lambda(Board.getBusServoPulse(self.legs_ID[i][0])),
-                                        pulse2angle_lambda(Board.getBusServoPulse(self.legs_ID[i][1])),
-                                        pulse2angle_lambda(Board.getBusServoPulse(self.legs_ID[i][2]))])
+                legs_joint_angle.append([pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][0])),
+                                        pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][1])),
+                                        pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][2]))])
             elif i >= 3:
-                legs_joint_angle.append([pulse2angle_lambda(Board.getBusServoPulse(self.legs_ID[i][0])),
-                                        -pulse2angle_lambda(Board.getBusServoPulse(self.legs_ID[i][1])),
-                                        -pulse2angle_lambda(Board.getBusServoPulse(self.legs_ID[i][2]))])
+                legs_joint_angle.append([pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][0])),
+                                        -pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][1])),
+                                        -pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][2]))])
 
-        return legs_joint_angle
+        return cls(legs_joint_angle)
 
     @staticmethod
     def calcLegFK(theta):
@@ -65,10 +65,10 @@ class hex_kine():
 
         HTM_leg = R0_1 * T0_1 * R1_2 * T1_2 * R2_3 * T2_3
 
-        return [HTM_leg, R0_3, R3_0]
+        return [HTM_leg, HTM_leg.t, R0_3, R3_0]
     
-    # @staticmethod
-    # def createRobotLegs():
+    # @classmethod
+    # def createRobotLegs(cls):
     #     legs_joint_angle = hex_kine.getJointAngle()
 
     #     # d=offset(i), a=length(i), alpha(i), theta(i)
@@ -88,7 +88,7 @@ class hex_kine():
     #                 offset = standard_DH_lambda(i)[2][3], qlim = (np.deg2rad(-120),0))],
     #             name='leg'+str(i)))    # create each leg as a "serial-link robot"
 
-    #     return hex_legs
+    #     return cls(hex_legs)
 
     # # hexapod legs model
     # hex_legs = createRobotLegs()
@@ -105,8 +105,8 @@ class hex_kine():
         (0,     -0.09, -0.02),
         (-0.12, -0.06, -0.02)]
 
-    @staticmethod
-    def getEndEffectorPose():
+    @classmethod
+    def getEndEffectorPose(cls):
         """
         : matrix transformation for legs related to base frame
         : rotx/y/z would related to fixed angle, so that:
@@ -141,7 +141,7 @@ class hex_kine():
         leg_eePose2hip = [leg_eePose2hip_lambda(0),leg_eePose2hip_lambda(1),leg_eePose2hip_lambda(2),
                         leg_eePose2hip_lambda(3),leg_eePose2hip_lambda(4),leg_eePose2hip_lambda(5)]
         
-        return [leg_eePose2base, leg_eePose2hip]
+        return cls([leg_eePose2base, leg_eePose2hip])
 
     @staticmethod
     def calcJointAngleIK(x,y,z):
@@ -188,11 +188,9 @@ class hex_kine():
                 else:
                     self.i += 1
         
-        @classmethod
         def stop(self):
             self.done=True
 
-        @classmethod
         def restart(self):
             self.done=False
             self.next_t=time.time()
@@ -207,8 +205,7 @@ class hex_kine():
     MAX_PACE_ABS_POS2BASE = -10 # foot limit absolute position: -10cm to base frame
     MAX_PACE_FREQ = 1  # Hz
 
-    @staticmethod
-    def doTripodGait(vx,vy,rz):
+    def doTripodGait(self,vx,vy,rz):
         """
         : input x,y,z cmd velocity, integrate it and generate the trajectory,
         : according to its current position, and return the angle of each joint,
@@ -238,7 +235,7 @@ class hex_kine():
             raise Exception(f"pace_freq should not be > {hex_kine.MAX_PACE_FREQ}Hz")
 
         # ---------------- orthogonal of the cmd velocity ----------------
-        foots_position2base = hex_kine.getEndEffectorPose()[0].t  # only foot position of current stage
+        foots_position2base = hex_kine.getEndEffectorPose()[1]  # only foot position of current stage
 
         leg_orthogonal_vel = []  # [x_speed, y_speed] relative to base frame
 
@@ -263,9 +260,9 @@ class hex_kine():
         # FIXME: servo unable to move when ctrl_freq is high because the value would be too small
         for i in range(0,6):
             next_foot_position.append([
-                foots_position2base[0] + leg_orthogonal_vel[0] / hex_kine.ctrl_freq,
-                foots_position2base[1] + leg_orthogonal_vel[1] / hex_kine.ctrl_freq,
-                foots_position2base[2] + leg_orthogonal_vel[2] / hex_kine.ctrl_freq])
+                foots_position2base[0] + leg_orthogonal_vel[0] / self.ctrl_freq,
+                foots_position2base[1] + leg_orthogonal_vel[1] / self.ctrl_freq,
+                foots_position2base[2] + leg_orthogonal_vel[2] / self.ctrl_freq])
 
         # next foot position relative to each hip frame
         next_foot_position2hip = []
@@ -293,7 +290,6 @@ class hex_kine():
     # convert joint angle to pulse value of servo
     angle2pulse_lambda = lambda angle: angle/hex_kine.PULSE2ANGLE + hex_kine.SERVO_HALF_PULSE # in degree
 
-    @classmethod
     def cmdHexapodMove(self,vx,vy,rz,mode):
         """
         : send the pulse value to each joint servo
@@ -303,32 +299,31 @@ class hex_kine():
 
         # inverse kinematics to get joint angle
         if mode == hex_mode_e.TRIPOD:
-            leg_joint_angle = self.doTripodGait(vx,vy,rz)
+            leg_joint_angle = hex_kine.doTripodGait(self,vx,vy,rz)
         elif mode == hex_mode_e.STAND:
             pass  # TODO: complete stand mode kinematics
 
         # if there are no velocity command, stay standing
         if np.abs(vx) < 1e-3 and np.abs(vy) < 1e-3 and np.abs(rz) < 1e-3 == True:
-            self.hex_timer.stop()
+            hex_kine.hex_timer.stop()
 
             for i in range(0,6):
                 leg_joint_angle[i][0] = theta_stand[0]
                 leg_joint_angle[i][1] = theta_stand[1]
                 leg_joint_angle[i][2] = theta_stand[2]
         else:
-            self.hex_timer.restart()
+            hex_kine.hex_timer.restart()
 
         # joint2 and 3 of leg3~5 was inversed because of assembling
         for i in range(0,6):
             if i < 3:
-                Board.setBusServoPulse(self.legs_ID[i][0], self.angle2pulse_lambda(leg_joint_angle[i][0]), 100)
-                Board.setBusServoPulse(self.legs_ID[i][1], self.angle2pulse_lambda(leg_joint_angle[i][1]), 100)
-                Board.setBusServoPulse(self.legs_ID[i][2], self.angle2pulse_lambda(leg_joint_angle[i][2]), 100)
+                Board.setBusServoPulse(hex_kine.legs_ID[i][0], hex_kine.angle2pulse_lambda(leg_joint_angle[i][0]), 100)
+                Board.setBusServoPulse(hex_kine.legs_ID[i][1], hex_kine.angle2pulse_lambda(leg_joint_angle[i][1]), 100)
+                Board.setBusServoPulse(hex_kine.legs_ID[i][2], hex_kine.angle2pulse_lambda(leg_joint_angle[i][2]), 100)
             elif i >= 3:
-                Board.setBusServoPulse(self.legs_ID[i][0], self.angle2pulse_lambda(leg_joint_angle[i][0]), 100)
-                Board.setBusServoPulse(self.legs_ID[i][1], self.angle2pulse_lambda(-leg_joint_angle[i][1]), 100)
-                Board.setBusServoPulse(self.legs_ID[i][2], self.angle2pulse_lambda(-leg_joint_angle[i][2]), 100)
+                Board.setBusServoPulse(hex_kine.legs_ID[i][0], hex_kine.angle2pulse_lambda(leg_joint_angle[i][0]), 100)
+                Board.setBusServoPulse(hex_kine.legs_ID[i][1], hex_kine.angle2pulse_lambda(-leg_joint_angle[i][1]), 100)
+                Board.setBusServoPulse(hex_kine.legs_ID[i][2], hex_kine.angle2pulse_lambda(-leg_joint_angle[i][2]), 100)
     
-    @classmethod
     def initHexapod(self):
-        self.cmdHexapodMove(0,0,0,hex_mode_e.TRIPOD)
+        hex_kine.cmdHexapodMove(self,0,0,0,hex_mode_e.TRIPOD)
