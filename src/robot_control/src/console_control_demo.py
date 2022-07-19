@@ -4,6 +4,7 @@ import time
 hexapod = kinematics.hex_kine(ctrl_freq = 30)
 
 hexapod.initHexapod()
+print('init...')
 time.sleep(2)
 
 while True:

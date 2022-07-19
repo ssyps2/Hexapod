@@ -26,25 +26,25 @@ class hex_kine():
     legs_ID = (leg_ID_lambda(7),leg_ID_lambda(4),leg_ID_lambda(1),leg_ID_lambda(10),leg_ID_lambda(13),leg_ID_lambda(16))
 
     @classmethod
-    def getJointAngle():
+    def getJointAngle(self):
         """
         : feedback angle by servo in rad (for IK)
             >>> retval: legs_joint_angle[legNum][jointID]
         """
-        pulse2angle_lambda = lambda pulse: (pulse - hex_kine.SERVO_HALF_PULSE) * hex_kine.PULSE2ANGLE # in degree
+        pulse2angle_lambda = lambda pulse: (pulse - self.SERVO_HALF_PULSE) * self.PULSE2ANGLE # in degree
 
         legs_joint_angle = []
 
         # joint2 and 3 of leg3~6 was inversed because of assembling
         for i in range(0,6):
             if i < 3:
-                legs_joint_angle.append([pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][0])),
-                                        pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][1])),
-                                        pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][2]))])
+                legs_joint_angle.append([pulse2angle_lambda(Board.getBusServoPulse(self.legs_ID[i][0])),
+                                        pulse2angle_lambda(Board.getBusServoPulse(self.legs_ID[i][1])),
+                                        pulse2angle_lambda(Board.getBusServoPulse(self.legs_ID[i][2]))])
             elif i >= 3:
-                legs_joint_angle.append([pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][0])),
-                                        -pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][1])),
-                                        -pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][2]))])
+                legs_joint_angle.append([pulse2angle_lambda(Board.getBusServoPulse(self.legs_ID[i][0])),
+                                        -pulse2angle_lambda(Board.getBusServoPulse(self.legs_ID[i][1])),
+                                        -pulse2angle_lambda(Board.getBusServoPulse(self.legs_ID[i][2]))])
 
         return legs_joint_angle
 
@@ -57,7 +57,7 @@ class hex_kine():
         R1_2 = sm.SE3.Rx(-pi/2) * sm.SE3.Rz(theta[1])
         R2_3 = sm.SE3.Rx(pi) * sm.SE3.Rz(theta[2])
         R0_3 = R0_1 * R1_2 * R2_3
-        R3_0 = np.transpose(R0_3)
+        R3_0 = sm.SE3.inv(R0_3)
 
         T0_1 = sm.SE3.Tx(0.043)
         T1_2 = sm.SE3.Tx(0.073)
@@ -159,26 +159,27 @@ class hex_kine():
             / (2*link_len[1]*link_len[2]))
         
         return [theta1, theta2, theta3]
-    
-    leftPair_pace_flag = 0
-    rightPair_pace_flag = 0
 
-    left_flag_sequence = (1,-1,0,0)
-    right_flag_sequence = (0,0,1,-1)
-
-    class __Timer():
+    class _Timer():
         def __init__(self, increment):
             self.next_t=time.time()
             self.i=0
             self.done=False
             self.increment=increment
+
+            self.leftPair_pace_flag = 0
+            self.rightPair_pace_flag = 0
+
+            self.left_flag_sequence = (1,-1,0,0)
+            self.right_flag_sequence = (0,0,1,-1)
+
             self._run()
 
         def _run(self):
             self.next_t+=self.increment
 
-            hex_kine.leftPair_pace_flag = hex_kine.left_flag_sequence[self.i]
-            hex_kine.rightPair_pace_flag = hex_kine.right_flag_sequence[self.i]
+            self.leftPair_pace_flag = self.left_flag_sequence[self.i]
+            self.rightPair_pace_flag = self.right_flag_sequence[self.i]
 
             if not self.done:
                 threading.Timer( self.next_t - time.time(), self._run).start()
@@ -194,12 +195,12 @@ class hex_kine():
         @classmethod
         def restart(self):
             self.done=False
-            self.next_t = time.time()
+            self.next_t=time.time()
             self.i=0
             self._run()
 
     pace_freq = 0.5  # Hz
-    hex_timer =  __Timer(increment = 1/(4*pace_freq)) # create a timer
+    hex_timer =  _Timer(increment = 1/(4*pace_freq)) # create a timer
 
     # constraints
     MAX_PACE_LENGTH = 0.15  # max pace length: 15cm
@@ -207,7 +208,7 @@ class hex_kine():
     MAX_PACE_FREQ = 1  # Hz
 
     @staticmethod
-    def doTripodGait(vx, vy, rz):
+    def doTripodGait(vx,vy,rz):
         """
         : input x,y,z cmd velocity, integrate it and generate the trajectory,
         : according to its current position, and return the angle of each joint,
@@ -218,7 +219,7 @@ class hex_kine():
         legs_yaw_angle = []
 
         for i in range(0,6):
-            legs_yaw_angle.append(hex_kine.getJointAngle(i)[0] + hex_kine.angle_hip2base[i])
+            legs_yaw_angle.append(hex_kine.getJointAngle()[i][0] + hex_kine.angle_hip2base[i])
         
         legRotateAngle = [] # leg rotate vector angle to base frame
 
@@ -241,8 +242,8 @@ class hex_kine():
 
         leg_orthogonal_vel = []  # [x_speed, y_speed] relative to base frame
 
-        leftPair_vz = hex_kine.leftPair_pace_flag * 0.04  # m/s
-        rightPair_vz = hex_kine.rightPair_pace_flag * 0.04  # m/s
+        leftPair_vz = hex_kine.hex_timer.leftPair_pace_flag * 0.04  # m/s
+        rightPair_vz = hex_kine.hex_timer.rightPair_pace_flag * 0.04  # m/s
 
         # leg swinging: (0,2,4) is the left pair, (1,3,5) is the right pair
         for i in (0,2,4):
@@ -293,7 +294,7 @@ class hex_kine():
     angle2pulse_lambda = lambda angle: angle/hex_kine.PULSE2ANGLE + hex_kine.SERVO_HALF_PULSE # in degree
 
     @classmethod
-    def cmdHexapodMove(vx,vy,rz,mode):
+    def cmdHexapodMove(self,vx,vy,rz,mode):
         """
         : send the pulse value to each joint servo
         """
@@ -302,32 +303,32 @@ class hex_kine():
 
         # inverse kinematics to get joint angle
         if mode == hex_mode_e.TRIPOD:
-            leg_joint_angle = hex_kine.doTripodGait(vx,vy,rz)
+            leg_joint_angle = self.doTripodGait(vx,vy,rz)
         elif mode == hex_mode_e.STAND:
             pass  # TODO: complete stand mode kinematics
 
         # if there are no velocity command, stay standing
         if np.abs(vx) < 1e-3 and np.abs(vy) < 1e-3 and np.abs(rz) < 1e-3 == True:
-            hex_kine.hex_timer.stop()
+            self.hex_timer.stop()
 
             for i in range(0,6):
                 leg_joint_angle[i][0] = theta_stand[0]
                 leg_joint_angle[i][1] = theta_stand[1]
                 leg_joint_angle[i][2] = theta_stand[2]
         else:
-            hex_kine.hex_timer.restart()
+            self.hex_timer.restart()
 
         # joint2 and 3 of leg3~5 was inversed because of assembling
         for i in range(0,6):
             if i < 3:
-                Board.setBusServoPulse(hex_kine.legs_ID[i][0], hex_kine.angle2pulse_lambda(leg_joint_angle[i][0]), 100)
-                Board.setBusServoPulse(hex_kine.legs_ID[i][1], hex_kine.angle2pulse_lambda(leg_joint_angle[i][1]), 100)
-                Board.setBusServoPulse(hex_kine.legs_ID[i][2], hex_kine.angle2pulse_lambda(leg_joint_angle[i][2]), 100)
+                Board.setBusServoPulse(self.legs_ID[i][0], self.angle2pulse_lambda(leg_joint_angle[i][0]), 100)
+                Board.setBusServoPulse(self.legs_ID[i][1], self.angle2pulse_lambda(leg_joint_angle[i][1]), 100)
+                Board.setBusServoPulse(self.legs_ID[i][2], self.angle2pulse_lambda(leg_joint_angle[i][2]), 100)
             elif i >= 3:
-                Board.setBusServoPulse(hex_kine.legs_ID[i][0], hex_kine.angle2pulse_lambda(leg_joint_angle[i][0]), 100)
-                Board.setBusServoPulse(hex_kine.legs_ID[i][1], hex_kine.angle2pulse_lambda(-leg_joint_angle[i][1]), 100)
-                Board.setBusServoPulse(hex_kine.legs_ID[i][2], hex_kine.angle2pulse_lambda(-leg_joint_angle[i][2]), 100)
+                Board.setBusServoPulse(self.legs_ID[i][0], self.angle2pulse_lambda(leg_joint_angle[i][0]), 100)
+                Board.setBusServoPulse(self.legs_ID[i][1], self.angle2pulse_lambda(-leg_joint_angle[i][1]), 100)
+                Board.setBusServoPulse(self.legs_ID[i][2], self.angle2pulse_lambda(-leg_joint_angle[i][2]), 100)
     
     @classmethod
-    def initHexapod():
-        hex_kine.cmdHexapodMove(0,0,0,hex_mode_e.TRIPOD)
+    def initHexapod(self):
+        self.cmdHexapodMove(0,0,0,hex_mode_e.TRIPOD)
