@@ -1,0 +1,6 @@
+import test_kine
+
+hexapod = test_kine.hex_kine(ctrl_freq = 30)
+
+hexapod.initHexapod()
+print('init...')
