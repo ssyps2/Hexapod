@@ -73,10 +73,10 @@ for i in range(0,6):
     servos_thread.append(one_leg_servos)
     servos_thread[i][j].start()  # start threads
 
-if __name__ == '__main__':
-    hexapod.initHexapod()
-    time.sleep(2)
-    print("init completed")
 
-    while True:
-        hexapod.implementCmdGait(0.1, 0, 0, kinematics.hex_mode_e().TRIPOD)
+hexapod.initHexapod()
+time.sleep(2)
+print("init completed")
+
+while True:
+    hexapod.implementCmdGait(0.1, 0, 0, kinematics.hex_mode_e().TRIPOD)

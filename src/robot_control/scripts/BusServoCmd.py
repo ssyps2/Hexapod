@@ -135,7 +135,7 @@ def serial_servo_get_rmsg(cmd):
             else:
                 return None
         except BaseException as e:
-            print(e)
+            print("servo_read_error:", e)
     else:
         serialHandle.flushInput()  # clear recv buffer
         return None

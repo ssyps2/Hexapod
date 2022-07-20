@@ -247,7 +247,7 @@ class hexKine():
                 next_foot_position2hip[i])
         
         # ------ calculate the joint angle according to the generated position ------
-        next_foot_joint_angle = []  # joint1~3 angle
+        next_foot_joint_angle = []  # joint0~2 angle
 
         for i in range(0,6):
             next_foot_joint_angle.append(hexKine.calcJointAngleIK(next_foot_position2hip[i][0],
@@ -285,4 +285,4 @@ class hexKine():
         return next_leg_joint_angle
     
     def initHexapod(self):
-        self.implementCmdGait(self, 0, 0, 0, hex_mode_e.TRIPOD)  # "stand-up" pose
+        self.implementCmdGait(vx=0, vy=0, rz=0, mode=hex_mode_e.TRIPOD)  # "stand-up" pose
