@@ -40,7 +40,7 @@ tx_pin = 27 # physical pin 13, BCM 27
 
 pi = pigpio.pi()
 
-serialHandle = serial.Serial("/dev/ttyAMA0", 115200)  # 初始化串口， 波特率为115200
+serialHandle = serial.Serial("/dev/ttyAMA0", 115200)  # init serial port with baud rate 115200
 
 def portInit():
     pi.set_mode(rx_pin, pigpio.OUTPUT)   # config RX_CON to be OUTPUT 
@@ -97,7 +97,6 @@ def serial_servo_wirte_cmd(id=None, w_cmd=None, dat1=None, dat2=None):
     buf.append(checksum(buf))
 
     serialHandle.write(buf) # send out
-    print(buf)
 
 ## send read command to servo
 def serial_servo_read_cmd(id=None, r_cmd=None):
