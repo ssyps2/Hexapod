@@ -1,8 +1,15 @@
 #!/usr/bin/env python3
+from xmlrpc.client import Fault
 import pigpio
 from BusServoCmd import *
 
 pi = pigpio.pi()
+
+def isInt(num):
+    if int(num):
+        return True
+    else:
+        return False
 
 def setBuzzer(new_state):
     pi.set_mode(6, pigpio.OUTPUT)
@@ -12,6 +19,11 @@ def setBusServoID(oldid, newid):
     serial_servo_wirte_cmd(oldid, SERVO_ID_WRITE, newid)
 
 def setBusServoPulse(id, pulse, use_time):
+    if isInt(id) and isInt(pulse) and isInt(use_time):
+        pass
+    else:
+        raise Exception("Input param for setBusServoPulse should be int")
+
     pulse = 0 if pulse < 0 else pulse
     pulse = 1000 if pulse > 1000 else pulse
     use_time = 0 if use_time < 0 else use_time

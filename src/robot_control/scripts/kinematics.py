@@ -45,14 +45,12 @@ class hex_kine():
 
         # joint2 and 3 of leg3~6 was inversed because of assembling
         for i in range(0,6):
-            j = 0
             one_leg_joint_angle = []
 
-            if i < 3 or (i >= 3 and j == 0):
-                for j in range(0,3):
+            for j in range(0,3):
+                if i < 3 or (i >= 3 and j == 0):
                     one_leg_joint_angle.append(pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][j])))
-            elif i >= 3 and j > 0:
-                for j in range(0,3):
+                elif i >= 3 and j > 0:
                     one_leg_joint_angle.append(-pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][0])))
 
             legs_joint_angle.append(one_leg_joint_angle)
@@ -291,7 +289,7 @@ class hex_kine():
         """
         # inverse kinematics to get joint angle
         if mode == hex_mode_e.TRIPOD:
-            leg_joint_angle = hex_kine.doTripodGait(self,vx,vy,rz)
+            self.next_leg_joint_angle = hex_kine.doTripodGait(self,vx,vy,rz)
         elif mode == hex_mode_e.STAND:
             pass  # TODO: complete stand mode kinematics
 
@@ -301,9 +299,9 @@ class hex_kine():
 
             # TODO: use jtraj to smooth it
             for i in range(0,6):
-                leg_joint_angle[i][0] = theta_stand[0]
-                leg_joint_angle[i][1] = theta_stand[1]
-                leg_joint_angle[i][2] = theta_stand[2]
+                self.next_leg_joint_angle[i][0] = theta_stand[0]
+                self.next_leg_joint_angle[i][1] = theta_stand[1]
+                self.next_leg_joint_angle[i][2] = theta_stand[2]
             
             self.restart_flag = 1
 
@@ -314,16 +312,12 @@ class hex_kine():
 
         # joint2 and 3 of leg3~6 was inversed because of assembling
         for i in range(0,6):
-            j = 0
-
-            if i < 3 or (i >= 3 and j == 0):
-                for j in range(0,3):
-                    Board.setBusServoPulse(hex_kine.legs_ID[i][j], hex_kine.angle2pulse_lambda(leg_joint_angle[i][j]), 10)
-                    time.sleep(0.01)
-            elif i >= 3 and j > 0:
-                for j in range(0,3):
-                    Board.setBusServoPulse(hex_kine.legs_ID[i][j], hex_kine.angle2pulse_lambda(-leg_joint_angle[i][j]), 10)
-                    time.sleep(0.01)
+            # input param for setBusServoPulse should be int
+            for j in range(0,3):
+                if i < 3 or (i >= 3 and j == 0):
+                    Board.setBusServoPulse(int(hex_kine.legs_ID[i][j]), int(hex_kine.angle2pulse_lambda(self.next_leg_joint_angle[i][j])), 10)
+                elif i >= 3 and j > 0:
+                    Board.setBusServoPulse(int(hex_kine.legs_ID[i][j]), int(hex_kine.angle2pulse_lambda(-self.next_leg_joint_angle[i][j])), 10)
     
     def initHexapod(self):
         hex_kine.cmdHexapodMove(self,0,0,0,hex_mode_e.TRIPOD)
