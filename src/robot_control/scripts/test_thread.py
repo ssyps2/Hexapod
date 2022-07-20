@@ -1,4 +1,4 @@
-import threading, Board
+import threading, Board, time
 
 class servoThread (threading.Thread):
     def __init__(self, name, id):
@@ -8,10 +8,10 @@ class servoThread (threading.Thread):
 
     def run(self):
         while True:
-            Board.getBusServoPulse(self.id)
+            print(f"{self.name}: ", Board.getBusServoPulse(self.id))
 
 servo_thread = []
 
-for i in range(0,18):
-    servo_thread.append(servoThread(name=f"Servo_{i+1}", id=i))
+for i in range(0,2):
+    servo_thread.append(servoThread(name=f"Servo{i+1}", id=i+1))
     servo_thread[i].start()
