@@ -17,6 +17,8 @@ pulse_stand = (500, 450, 193)
 class hex_kine:
     def __init__(self, ctrl_freq):
         self.ctrl_freq = ctrl_freq  # task frequency in Hz
+        self.hex_timer =  self._Timer(increment = 1/(4*hex_kine.pace_freq)) # create a timer
+        self.restart_flag = 0
     
     SERVO_ANGLE_RANGE = 240  # in degree
     SERVO_MAX_PULSE = 1000
@@ -33,7 +35,7 @@ class hex_kine:
 
         # joint2 and 3 of leg3~6 was inversed because of assembling
         for i in range(0,6):
-            legs_joint_angle.append([pulse_stand[0],pulse_stand[1],pulse_stand[2]])
+            legs_joint_angle.append([theta_stand[0],theta_stand[1],theta_stand[2]])
 
         return legs_joint_angle
 
@@ -54,7 +56,7 @@ class hex_kine:
 
         HTM_leg = R0_1 * T0_1 * R1_2 * T1_2 * R2_3 * T2_3
 
-        return [HTM_leg, HTM_leg.t, R0_3, R3_0]
+        return [HTM_leg, R0_3, R3_0]
 
     # hip servo assemble angle relative to base frame
     angle_hip2base = (np.arctan2(6,12), pi/2, pi-np.arctan2(6,12), 
@@ -79,8 +81,8 @@ class hex_kine:
         """
         legs_joint_angle = hex_kine.getJointAngle()
 
-        leg_eePose2base_lambda = lambda tran_x,tran_y,tran_z,rota_z,leg_id: sm.SE3(tran_x,tran_y,tran_z)*\
-            sm.SE3.Rz(rota_z) * hex_kine.calcLegFK([legs_joint_angle[leg_id][0],legs_joint_angle[leg_id][1],legs_joint_angle[leg_id][2]])[0]
+        leg_eePose2base_lambda = lambda tran_x,tran_y,tran_z,rota_z,leg_id: sm.SE3(tran_x,tran_y,tran_z)*sm.SE3.Rz(rota_z)*\
+            hex_kine.calcLegFK([legs_joint_angle[leg_id][0],legs_joint_angle[leg_id][1],legs_joint_angle[leg_id][2]])[0]
 
         leg_eePose2base = []
 
@@ -88,14 +90,8 @@ class hex_kine:
             leg_eePose2base.append(leg_eePose2base_lambda(
                 hex_kine.position_hip2base[i][0], hex_kine.position_hip2base[i][1],
                 hex_kine.position_hip2base[i][2], hex_kine.angle_hip2base[i], i))
-
-        # end-effector pose of each leg relative to its hip (right-handed coordinate)
-        leg_eePose2hip_lambda = lambda leg_id: hex_kine.calcLegFK([legs_joint_angle[leg_id][0],legs_joint_angle[leg_id][1],legs_joint_angle[leg_id][2]])[0]
-
-        leg_eePose2hip = [leg_eePose2hip_lambda(0),leg_eePose2hip_lambda(1),leg_eePose2hip_lambda(2),
-                        leg_eePose2hip_lambda(3),leg_eePose2hip_lambda(4),leg_eePose2hip_lambda(5)]
         
-        return [leg_eePose2base, leg_eePose2hip]
+        return leg_eePose2base
 
     @staticmethod
     def calcJointAngleIK(x,y,z):
@@ -103,13 +99,13 @@ class hex_kine:
         :[IK Part]
         """
         link_len = (0.043, 0.073, 0.133)
-        cos_beta_angle = np.sqrt(x^2+y^2) / np.sqrt(x^2+y^2+z^2)
-        L_pow2 = link_len[0]^2 + x^2 + y^2 + z^2 - 2*cos_beta_angle*link_len[0]*np.sqrt(x^2+y^2+z^2)
+        cos_beta_angle = np.sqrt(x**2+y**2) / np.sqrt(x**2+y**2+z**2)
+        L_pow2 = link_len[0]**2 + x**2 + y**2 + z**2 - 2*cos_beta_angle*link_len[0]*np.sqrt(x**2+y**2+z**2)
 
         theta1 = np.arctan2(y,x)
-        theta2 = pi - np.arccos((link_len[0]^2+L_pow2-x^2-y^2-z^2) / (2*link_len[0]*np.sqrt(L_pow2)))\
-            - np.arccos((link_len[1]^2+L_pow2-link_len[2]^2) / (2*link_len[1]*np.sqrt(L_pow2)))
-        theta3 = np.arccos((link_len[0]^2-link_len[1]^2-link_len[2]^2+x^2+y^2+z^2-2*cos_beta_angle*link_len[0]*np.sqrt(x^2+y^2+z^2))\
+        theta2 = pi - np.arccos((link_len[0]**2+L_pow2-x**2-y**2-z**2) / (2*link_len[0]*np.sqrt(L_pow2)))\
+            - np.arccos((link_len[1]**2+L_pow2-link_len[2]**2) / (2*link_len[1]*np.sqrt(L_pow2)))
+        theta3 = np.arccos((link_len[0]**2-link_len[1]**2-link_len[2]**2+x**2+y**2+z**2-2*cos_beta_angle*link_len[0]*np.sqrt(x**2+y**2+z**2))\
             / (2*link_len[1]*link_len[2]))
         
         return [theta1, theta2, theta3]
@@ -152,7 +148,6 @@ class hex_kine:
             self._run()
 
     pace_freq = 0.5  # Hz
-    hex_timer =  _Timer(increment = 1/(4*pace_freq)) # create a timer
 
     # constraints
     MAX_PACE_LENGTH = 0.15  # max pace length: 15cm
@@ -189,47 +184,50 @@ class hex_kine:
             raise Exception(f"pace_freq should not be > {hex_kine.MAX_PACE_FREQ}Hz")
 
         # ---------------- orthogonal of the cmd velocity ----------------
-        foots_position2base = hex_kine.getEndEffectorPose()[1]  # only foot position of current stage
+        foots_position2base = []
+
+        for i in range(0,6):
+            foots_position2base.append(hex_kine.getEndEffectorPose()[i].t)  # only foot position of current stage
 
         leg_orthogonal_vel = []  # [x_speed, y_speed] relative to base frame
 
-        leftPair_vz = hex_kine.hex_timer.leftPair_pace_flag * 0.04  # m/s
-        rightPair_vz = hex_kine.hex_timer.rightPair_pace_flag * 0.04  # m/s
+        leftPair_vz = self.hex_timer.leftPair_pace_flag * 0.04  # m/s
+        rightPair_vz = self.hex_timer.rightPair_pace_flag * 0.04  # m/s
 
         # leg swinging: (0,2,4) is the left pair, (1,3,5) is the right pair
         for i in (0,2,4):
-            if leftPair_vz == 0:
-                leg_orthogonal_vel.append([-(vx+rz*np.cos(legRotateAngle)), -(vy+rz*np.sin(legRotateAngle)), 0])
+            if leftPair_vz==0 and self.hex_timer.done==False:
+                leg_orthogonal_vel.append([-(vx+rz*np.cos(legRotateAngle[i])), -(vy+rz*np.sin(legRotateAngle[i])), 0])
             else:
-                leg_orthogonal_vel.append([vx+rz*np.cos(legRotateAngle), vy+rz*np.sin(legRotateAngle), leftPair_vz])
+                leg_orthogonal_vel.append([vx+rz*np.cos(legRotateAngle[i]), vy+rz*np.sin(legRotateAngle[i]), leftPair_vz])
         for i in (1,3,5):
-            if rightPair_vz == 0:
-                leg_orthogonal_vel.append([-(vx+rz*np.cos(legRotateAngle)), -(vy+rz*np.sin(legRotateAngle)), 0])
+            if rightPair_vz==0 and self.hex_timer.done==False:
+                leg_orthogonal_vel.append([-(vx+rz*np.cos(legRotateAngle[i])), -(vy+rz*np.sin(legRotateAngle[i])), 0])
             else:
-                leg_orthogonal_vel.append([vx+rz*np.cos(legRotateAngle), vy+rz*np.sin(legRotateAngle), rightPair_vz])
+                leg_orthogonal_vel.append([vx+rz*np.cos(legRotateAngle[i]), vy+rz*np.sin(legRotateAngle[i]), rightPair_vz])
         
         # ---------- generate the next foot position (with constraint) ----------
-        next_foot_position = []
+        self.next_foot_position = []
 
         # FIXME: servo unable to move when ctrl_freq is high because the value would be too small
         for i in range(0,6):
-            next_foot_position.append([
-                foots_position2base[0] + leg_orthogonal_vel[i][0] / self.ctrl_freq,
-                foots_position2base[1] + leg_orthogonal_vel[i][1] / self.ctrl_freq,
-                foots_position2base[2] + leg_orthogonal_vel[i][2] / self.ctrl_freq])
+            self.next_foot_position.append([
+                foots_position2base[i][0] + leg_orthogonal_vel[i][0] / self.ctrl_freq,
+                foots_position2base[i][1] + leg_orthogonal_vel[i][1] / self.ctrl_freq,
+                foots_position2base[i][2] + leg_orthogonal_vel[i][2] / self.ctrl_freq])
 
         # next foot position relative to each hip frame
         next_foot_position2hip = []
 
         for i in range(0,6):
             next_foot_position2hip.append([
-                next_foot_position[i][0] - hex_kine.position_hip2base[i][0],
-                next_foot_position[i][1] - hex_kine.position_hip2base[i][1],
-                next_foot_position[i][2] - hex_kine.position_hip2base[i][2],
-                1]) # append 1 to create 1by4 matrix for multiplication
+                self.next_foot_position[i][0] - hex_kine.position_hip2base[i][0],
+                self.next_foot_position[i][1] - hex_kine.position_hip2base[i][1],
+                self.next_foot_position[i][2] - hex_kine.position_hip2base[i][2],
+                1.]) # append 1 to create 1by4 matrix for multiplication
             
             # it also works for 1by3 matrix
-            next_foot_position2hip[i] = np.matmul(np.transpose(sm.SE3.Rz(hex_kine.angle_hip2base[i])),
+            next_foot_position2hip[i] = np.dot(np.transpose(sm.SE3.Rz(hex_kine.angle_hip2base[i])),
                 next_foot_position2hip[i])
         
         # ------ calculate the joint angle according to the generated position ------
@@ -242,7 +240,7 @@ class hex_kine:
         return next_foot_joint_angle
 
     # convert joint angle to pulse value of servo
-    angle2pulse_lambda = lambda angle: angle/hex_kine.PULSE2ANGLE + hex_kine.SERVO_HALF_PULSE # in degree
+    angle2pulse_lambda = lambda angle: np.rad2deg(angle)/hex_kine.PULSE2ANGLE+hex_kine.SERVO_HALF_PULSE # in degree
 
     def cmdHexapodMove(self,vx,vy,rz,mode):
         """
@@ -255,19 +253,25 @@ class hex_kine:
             pass  # TODO: complete stand mode kinematics
 
         # if there are no velocity command, stay standing
-        if np.abs(vx) < 1e-3 and np.abs(vy) < 1e-3 and np.abs(rz) < 1e-3 == True:
-            hex_kine.hex_timer.stop()
+        if (np.abs(vx) < 1e-3 and np.abs(vy) < 1e-3 and np.abs(rz) < 1e-3).T == True:
+            self.hex_timer.stop()
 
             for i in range(0,6):
                 leg_joint_angle[i][0] = theta_stand[0]
                 leg_joint_angle[i][1] = theta_stand[1]
                 leg_joint_angle[i][2] = theta_stand[2]
-        else:
-            hex_kine.hex_timer.restart()
+            
+            self.restart_flag = 1
 
+        else:
+            if (self.restart_flag == 1):
+                self.hex_timer.restart()
+                self.restart_flag = 0  # do once
+
+        print('-----------------------------------')
         print(hex_kine.angle2pulse_lambda(leg_joint_angle[0][0]),
             hex_kine.angle2pulse_lambda(leg_joint_angle[0][1]),
             hex_kine.angle2pulse_lambda(leg_joint_angle[0][2]))
     
     def initHexapod(self):
-        hex_kine.cmdHexapodMove(self,0,0,0,hex_mode_e.TRIPOD)
+        hex_kine.cmdHexapodMove(self,vx=0,vy=0,rz=0,mode=hex_mode_e.TRIPOD)
