@@ -19,10 +19,14 @@ class servoThread (threading.Thread):
         self.legID = legID
         self.jointID = jointID
 
+        self.lock = threading.Lock()
+
     def run(self):
         while True:
             # update joint angle
             try:
+                self.lock.acquire()
+
                 # joint1 and 2 of leg3~5 was inversed because of assembling
                 if self.servoID == 'Leg3_Joint1' or self.name == 'Leg3_Joint2' or\
                 self.name == 'Leg4_Joint1' or self.name == 'Leg4_Joint2' or\
@@ -38,12 +42,16 @@ class servoThread (threading.Thread):
                 # send back to hexKine class instance
                 hexapod.legs_joint_angle[self.legID][self.jointID] = self.angle
 
+                self.lock.release()
+
             except Exception:
                 pass
 
             # send control command to servo
             try:
                 self.next_joint_angle = hexapod.next_feet_joint_angle[self.legID][self.jointID]
+
+                self.lock.acquire()
 
                 # joint1 and 2 of leg3~5 was inversed because of assembling
                 if self.servoID == 'Leg3_Joint1' or self.name == 'Leg3_Joint2' or\
@@ -57,6 +65,8 @@ class servoThread (threading.Thread):
                     raise Exception(f"{self.name}: command pulse out of range")
                 else:
                     Board.setBusServoPulse(self.servoID, self.pulse, 1)
+                
+                self.lock.release()
             
             except Exception:
                 pass
