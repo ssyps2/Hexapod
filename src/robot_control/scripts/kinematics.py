@@ -1,6 +1,5 @@
 from cmath import pi
 import enum
-import Board
 import numpy as np
 import spatialmath as sm
 # import roboticstoolbox as rtb
@@ -11,51 +10,28 @@ class hex_mode_e(enum.Enum):
     STAND  = 0,
     TRIPOD = 1,
 
-# "stand pose" joint angle (theta, joint1~3)
+# "stand pose" joint angle (theta, joint0~2)
 theta_stand = (0, np.deg2rad(-12), np.deg2rad(-74))
 
-class hex_kine():
+## init joint servo ID in legs
+leg_ID_lambda = lambda id: (id,id+1,id+2)
+#               leg0            leg1             leg2              leg3             leg4              leg5
+legs_ID = (leg_ID_lambda(7),leg_ID_lambda(4),leg_ID_lambda(1),leg_ID_lambda(10),leg_ID_lambda(13),leg_ID_lambda(16))
+
+class hexKine():
     def __init__(self, ctrl_freq):
         self.ctrl_freq = ctrl_freq  # task frequency in Hz
-        self.hex_timer =  self._Timer(increment = 1/(4*hex_kine.pace_freq)) # create a timer
+
+        self.hex_timer =  self._Timer(increment = 1/(4*hexKine.pace_freq)) # create a timer
         self.restart_flag = 0
-        
-        # hexapod legs model
-        # self.hex_legs = self.createRobotLegs()
+
+        self.legs_joint_angle = [[]]
+        self.next_feet_joint_angle = [[]]
 
     SERVO_ANGLE_RANGE = 240  # in degree
     SERVO_MAX_PULSE = 1000
     SERVO_HALF_PULSE = SERVO_MAX_PULSE/2  # 500
     PULSE2ANGLE = SERVO_ANGLE_RANGE / SERVO_MAX_PULSE  # 0.24, in degree
-
-    ## init joint servo ID in legs
-    leg_ID_lambda = lambda id: (id,id+1,id+2)
-    #               leg1            leg2             leg3              leg4             leg5              leg6
-    legs_ID = (leg_ID_lambda(7),leg_ID_lambda(4),leg_ID_lambda(1),leg_ID_lambda(10),leg_ID_lambda(13),leg_ID_lambda(16))
-
-    @staticmethod
-    def getJointAngle():
-        """
-        : feedback angle by servo in rad (for IK)
-            >>> retval: legs_joint_angle[legNum][jointID]
-        """
-        pulse2angle_lambda = lambda pulse: (pulse - hex_kine.SERVO_HALF_PULSE) * hex_kine.PULSE2ANGLE # in degree
-
-        legs_joint_angle = []
-
-        # joint2 and 3 of leg3~6 was inversed because of assembling
-        for i in range(0,6):
-            one_leg_joint_angle = []
-
-            for j in range(0,3):
-                if i < 3 or (i >= 3 and j == 0):
-                    one_leg_joint_angle.append(pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][j])))
-                elif i >= 3 and j > 0:
-                    one_leg_joint_angle.append(-pulse2angle_lambda(Board.getBusServoPulse(hex_kine.legs_ID[i][0])))
-
-            legs_joint_angle.append(one_leg_joint_angle)
-
-        return legs_joint_angle
 
     @staticmethod
     def calcLegFK(theta):
@@ -76,12 +52,10 @@ class hex_kine():
 
         return HTM_leg
     
-    # def createRobotLegs():
-    #     legs_joint_angle = hex_kine.getJointAngle()
-
+    # def createRobotLegs(self):
     #     # d=offset(i), a=length(i), alpha(i), theta(i)
-    #     standard_DH_lambda = lambda legNum: [ [0, 0.043, -pi/2, legs_joint_angle[legNum][0]],
-    #         [0, 0.073, pi, legs_joint_angle[legNum][1]], [0, 0.133, 0, legs_joint_angle[legNum][2]] ]
+    #     standard_DH_lambda = lambda legNum: [ [0, 0.043, -pi/2, self.legs_joint_angle[legNum][0]],
+    #         [0, 0.073, pi, self.legs_joint_angle[legNum][1]], [0, 0.133, 0, self.legs_joint_angle[legNum][2]] ]
 
     #     hex_legs = []
 
@@ -98,6 +72,9 @@ class hex_kine():
 
     #     return hex_legs
 
+    # # hexapod legs model
+    # hex_legs = createRobotLegs()
+
     # hip servo assemble angle relative to base frame
     angle_hip2base = (np.arctan2(6,12), pi/2, pi-np.arctan2(6,12), 
                     -np.arctan2(6,12), -pi/2, np.arctan2(6,12)-pi)
@@ -110,8 +87,7 @@ class hex_kine():
         (0,     -0.09, -0.02),
         (-0.12, -0.06, -0.02)]
 
-    @staticmethod
-    def getEndEffectorPose():
+    def getEndEffectorPose(self):
         """
         : matrix transformation for legs related to base frame
         : rotx/y/z would related to fixed angle, so that:
@@ -119,18 +95,17 @@ class hex_kine():
         : for the leg, in euler angle: z1->x1->z2->z3
             >>> retval: list of end-effector pose to base frame
         """
-        legs_joint_angle = hex_kine.getJointAngle()
-
         # end-effector pose of each leg relative to base frame (right-handed coordinate)
         leg_eePose2base_lambda = lambda tran_x,tran_y,tran_z,rota_z,leg_id: sm.SE3(tran_x,tran_y,tran_z)*\
-            sm.SE3.Rz(rota_z) * hex_kine.calcLegFK([legs_joint_angle[leg_id][0],legs_joint_angle[leg_id][1],legs_joint_angle[leg_id][2]])
+            sm.SE3.Rz(rota_z) * hexKine.calcLegFK([self.legs_joint_angle[leg_id][0],self.legs_joint_angle[leg_id][1],
+            self.legs_joint_angle[leg_id][2]])
 
         leg_eePose2base = []
 
         for i in range(0,6):
             leg_eePose2base.append(leg_eePose2base_lambda(
-                hex_kine.position_hip2base[i][0], hex_kine.position_hip2base[i][1],
-                hex_kine.position_hip2base[i][2], hex_kine.angle_hip2base[i], i))
+                hexKine.position_hip2base[i][0], hexKine.position_hip2base[i][1],
+                hexKine.position_hip2base[i][2], hexKine.angle_hip2base[i], i))
 
         return leg_eePose2base
 
@@ -195,7 +170,7 @@ class hex_kine():
     MAX_PACE_ABS_POS2BASE = -10 # foot limit absolute position: -10cm to base frame
     MAX_PACE_FREQ = 1  # Hz
 
-    def doTripodGait(self,vx,vy,rz):
+    def generateTripodNextFoot(self,vx,vy,rz):
         """
         : input x,y,z cmd velocity, integrate it and generate the trajectory,
         : according to its current position, and return the angle of each joint,
@@ -206,7 +181,7 @@ class hex_kine():
         legs_yaw_angle = []
 
         for i in range(0,6):
-            legs_yaw_angle.append(hex_kine.getJointAngle()[i][0] + hex_kine.angle_hip2base[i])
+            legs_yaw_angle.append(self.legs_joint_angle[i][0] + hexKine.angle_hip2base[i])
         
         legRotateAngle = [] # leg rotate vector angle to base frame
 
@@ -221,14 +196,14 @@ class hex_kine():
                 legRotateAngle[i] += 2*pi
 
         # ------------------ regulate the pace freq ------------------
-        if hex_kine.pace_freq > hex_kine.MAX_PACE_FREQ:
-            raise Exception(f"pace_freq should not be > {hex_kine.MAX_PACE_FREQ}Hz")
+        if hexKine.pace_freq > hexKine.MAX_PACE_FREQ:
+            raise Exception(f"pace_freq should not be > {hexKine.MAX_PACE_FREQ}Hz")
 
         # ---------------- orthogonal of the cmd velocity ----------------
         foots_position2base = []  # only foot position of current stage
 
         for i in range(0,6):
-            foots_position2base.append(hex_kine.getEndEffectorPose()[i].t)  # only foot position of current stage
+            foots_position2base.append(hexKine.getEndEffectorPose()[i].t)  # only foot position of current stage
 
         leg_orthogonal_vel = []  # [x_speed, y_speed] relative to base frame
 
@@ -262,34 +237,31 @@ class hex_kine():
 
         for i in range(0,6):
             next_foot_position2hip.append([
-                next_foot_position[i][0] - hex_kine.position_hip2base[i][0],
-                next_foot_position[i][1] - hex_kine.position_hip2base[i][1],
-                next_foot_position[i][2] - hex_kine.position_hip2base[i][2],
+                next_foot_position[i][0] - hexKine.position_hip2base[i][0],
+                next_foot_position[i][1] - hexKine.position_hip2base[i][1],
+                next_foot_position[i][2] - hexKine.position_hip2base[i][2],
                 1.]) # append 1 to create 1by4 matrix for multiplication
             
             # it also works for 1by3 matrix
-            next_foot_position2hip[i] = np.dot(np.transpose(sm.SE3.Rz(hex_kine.angle_hip2base[i])),
+            next_foot_position2hip[i] = np.dot(np.transpose(sm.SE3.Rz(hexKine.angle_hip2base[i])),
                 next_foot_position2hip[i])
         
         # ------ calculate the joint angle according to the generated position ------
         next_foot_joint_angle = []  # joint1~3 angle
 
         for i in range(0,6):
-            next_foot_joint_angle.append(hex_kine.calcJointAngleIK(next_foot_position2hip[i][0],
+            next_foot_joint_angle.append(hexKine.calcJointAngleIK(next_foot_position2hip[i][0],
                 next_foot_position2hip[i][1], next_foot_position2hip[i][2]))
         
         return next_foot_joint_angle
 
-    # convert joint angle to pulse value of servo
-    angle2pulse_lambda = lambda angle: np.rad2deg(angle)/hex_kine.PULSE2ANGLE+hex_kine.SERVO_HALF_PULSE # in degree
-
-    def cmdHexapodMove(self,vx,vy,rz,mode):
+    def implementCmdGait(self,vx,vy,rz,mode):
         """
         : send the pulse value to each joint servo
         """
         # inverse kinematics to get joint angle
         if mode == hex_mode_e.TRIPOD:
-            self.next_leg_joint_angle = hex_kine.doTripodGait(self,vx,vy,rz)
+            next_leg_joint_angle = hexKine.generateTripodNextFoot(self,vx,vy,rz)
         elif mode == hex_mode_e.STAND:
             pass  # TODO: complete stand mode kinematics
 
@@ -299,9 +271,9 @@ class hex_kine():
 
             # TODO: use jtraj to smooth it
             for i in range(0,6):
-                self.next_leg_joint_angle[i][0] = theta_stand[0]
-                self.next_leg_joint_angle[i][1] = theta_stand[1]
-                self.next_leg_joint_angle[i][2] = theta_stand[2]
+                next_leg_joint_angle[i][0] = theta_stand[0]
+                next_leg_joint_angle[i][1] = theta_stand[1]
+                next_leg_joint_angle[i][2] = theta_stand[2]
             
             self.restart_flag = 1
 
@@ -310,14 +282,7 @@ class hex_kine():
                 self.hex_timer.restart()
                 self.restart_flag = 0  # do once
 
-        # joint2 and 3 of leg3~6 was inversed because of assembling
-        for i in range(0,6):
-            # input param for setBusServoPulse should be int
-            for j in range(0,3):
-                if i < 3 or (i >= 3 and j == 0):
-                    Board.setBusServoPulse(int(hex_kine.legs_ID[i][j]), int(hex_kine.angle2pulse_lambda(self.next_leg_joint_angle[i][j])), 10)
-                elif i >= 3 and j > 0:
-                    Board.setBusServoPulse(int(hex_kine.legs_ID[i][j]), int(hex_kine.angle2pulse_lambda(-self.next_leg_joint_angle[i][j])), 10)
+        return next_leg_joint_angle
     
     def initHexapod(self):
-        hex_kine.cmdHexapodMove(self,0,0,0,hex_mode_e.TRIPOD)
+        self.implementCmdGait(self, 0, 0, 0, hex_mode_e.TRIPOD)  # "stand-up" pose
