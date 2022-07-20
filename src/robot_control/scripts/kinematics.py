@@ -22,6 +22,9 @@ class hex_kine():
         
         # hexapod legs model
         # self.hex_legs = self.createRobotLegs()
+    
+    def __call__(self):
+        print("Instance is called via special method")
 
     SERVO_ANGLE_RANGE = 240  # in degree
     SERVO_MAX_PULSE = 1000
