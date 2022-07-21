@@ -13,3 +13,4 @@ while True:
     for i in range(0,18):
         # Board.setBusServoPulse(i+1,500,1)
         print(Board.getBusServoPulse(i+1))
+        time.sleep(0.1)

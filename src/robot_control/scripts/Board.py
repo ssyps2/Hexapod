@@ -31,8 +31,7 @@ def setBusServoPulse(id, pulse, use_time):
     serial_servo_wirte_cmd(id, SERVO_MOVE_TIME_WRITE, pulse, use_time)
 
 def getBusServoPulse(id):
-    while True:
-        serial_servo_read_cmd(id, SERVO_POS_READ)
-        msg = serial_servo_get_rmsg(SERVO_POS_READ)
-        if msg is not None:
-            return msg
+    serial_servo_read_cmd(id, SERVO_POS_READ)
+    msg = serial_servo_get_rmsg(SERVO_POS_READ)
+    if msg is not None:
+        return msg

@@ -111,29 +111,28 @@ def serial_servo_read_cmd(id=None, r_cmd=None):
 
 def serial_servo_get_rmsg(cmd):
     serialHandle.flushInput()
+
     portRead()
-    time.sleep(0.005)   # wait for completed
+
+    time.sleep(0.0007)   # wait for completed
     count = serialHandle.inWaiting()    # obtain the number of bytes in recv buffer
-    if count != 0:  # if received message
+
+    if count != 8:
         recv_data = serialHandle.read(count)
-        # for i in recv_data:
-        #     print('%#x' %ord(i))
+        print(recv_data)
+        
         try:
             if recv_data[0] == 0x55 and recv_data[1] == 0x55 and recv_data[4] == cmd:
                 dat_len = recv_data[3]
                 serialHandle.flushInput()
-                if dat_len == 4:
-                    # print ctypes.c_int8(ord(recv_data[5])).value    # convert to signed int
-                    return recv_data[5]
-                elif dat_len == 5:
+                
+                if dat_len == 5:
                     pos = 0xffff & (recv_data[5] | (0xff00 & (recv_data[6] << 8)))
                     return ctypes.c_int16(pos).value
-                elif dat_len == 7:
-                    pos1 = 0xffff & (recv_data[5] | (0xff00 & (recv_data[6] << 8)))
-                    pos2 = 0xffff & (recv_data[7] | (0xff00 & (recv_data[8] << 8)))
-                    return ctypes.c_int16(pos1).value, ctypes.c_int16(pos2).value
+                
             else:
                 return None
+
         except BaseException as e:
             print("servo_read_error:", e)
     else:
