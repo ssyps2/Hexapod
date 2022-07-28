@@ -116,10 +116,11 @@ def serial_servo_get_rmsg(cmd):
 
     time.sleep(0.0007)   # wait for completed
     count = serialHandle.inWaiting()    # obtain the number of bytes in recv buffer
+    # print('obtained data length: ', count)
 
-    if count != 8:
+    if count == 8:
         recv_data = serialHandle.read(count)
-        print(recv_data)
+        # print('received raw data: ', recv_data)
         
         try:
             if recv_data[0] == 0x55 and recv_data[1] == 0x55 and recv_data[4] == cmd:

@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from xmlrpc.client import Fault
 import pigpio
 from BusServoCmd import *
 
