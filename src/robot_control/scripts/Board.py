@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-from xmlrpc.client import Fault
 import pigpio
 from BusServoCmd import *
 
@@ -14,9 +13,6 @@ def isInt(num):
 def setBuzzer(new_state):
     pi.set_mode(6, pigpio.OUTPUT)
     pi.write(6, new_state)
-
-def setBusServoID(oldid, newid):
-    serial_servo_wirte_cmd(oldid, SERVO_ID_WRITE, newid)
 
 def setBusServoPulse(id, pulse, use_time):
     if isInt(id) and isInt(pulse) and isInt(use_time):
